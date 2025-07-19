@@ -125,14 +125,17 @@ def _segment_words(pil_img: Image.Image) -> List[Tuple[int, int, int, int]]:
     return boxes[:MAX_WORDS]
 
 
-def _batch_infer(crops: List[Image.Image], processor, model) -> List[str]:
-    if not crops:
-        return []
-    pixel_values = processor(images=crops, return_tensors="pt", padding=True).pixel_values
-    with torch.no_grad():
-        generated_ids = model.generate(pixel_values)
-    texts = processor.batch_decode(generated_ids, skip_special_tokens=True)
-    return [t.strip() for t in texts]
+def _batch_infer(crops: List[Image.Image], processor, model, batch_size=1) -> List[str]:
+    texts = []
+    for i in range(0, len(crops), batch_size):
+        batch_crops = crops[i : i + batch_size]
+        pixel_values = processor(images=batch_crops, return_tensors="pt", padding=True).pixel_values
+        with torch.no_grad():
+            generated_ids = model.generate(pixel_values)
+        batch_texts = processor.batch_decode(generated_ids, skip_special_tokens=True)
+        texts.extend([t.strip() for t in batch_texts])
+    return texts
+
 
 
 def run_ocr(image_bytes: bytes, processor, model) -> Dict[str, Any]:
