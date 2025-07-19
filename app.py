@@ -1,7 +1,7 @@
 import os
 import time
 from typing import Optional
-
+import traceback
 import torch
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
@@ -59,7 +59,10 @@ async def predict(file: UploadFile = File(...)):
         # Try one more time (lazy reload) before failing
         try:
             m_proc, m_model = load_models(force=True)
+            print("Model loaded successfully.")
         except Exception as e:
+            print("Error while loading model:", e)
+            traceback.print_exc()
             raise HTTPException(status_code=500, detail=f"Model not ready: {e}")
         else:
             processor, model = m_proc, m_model
