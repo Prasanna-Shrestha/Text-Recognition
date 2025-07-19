@@ -126,6 +126,7 @@ def _segment_words(pil_img: Image.Image) -> List[Tuple[int, int, int, int]]:
 
 
 def _batch_infer(crops: List[Image.Image], processor, model, batch_size=1) -> List[str]:
+    import gc
     texts = []
     for i in range(0, len(crops), batch_size):
         batch_crops = crops[i : i + batch_size]
@@ -134,7 +135,10 @@ def _batch_infer(crops: List[Image.Image], processor, model, batch_size=1) -> Li
             generated_ids = model.generate(pixel_values)
         batch_texts = processor.batch_decode(generated_ids, skip_special_tokens=True)
         texts.extend([t.strip() for t in batch_texts])
+        del pixel_values, generated_ids
+        gc.collect()
     return texts
+
 
 
 
@@ -150,7 +154,7 @@ def run_ocr(image_bytes: bytes, processor, model) -> Dict[str, Any]:
         crop_pil = Image.fromarray(crop)
         crops.append(crop_pil)
 
-    preds = _batch_infer(crops, processor, model)
+    preds = _batch_infer(crops, processor, model, batch_size=1)
     sentence = " ".join([p for p in preds if p])
 
     return {
