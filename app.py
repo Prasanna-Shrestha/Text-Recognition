@@ -81,7 +81,7 @@ demo = gr.Interface(
 )
 
 # Enable queuing so multiple users can send jobs (optional)
-demo.queue(max_size=12, concurrency_count=1)
+demo.queue(max_size=12)
 
 if __name__ == "__main__":
     demo.launch()
