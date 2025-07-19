@@ -67,7 +67,7 @@ def load_models(force: bool = False):
 
     # Base processor (same tokenizer/feature processor as base)
     processor = TrOCRProcessor.from_pretrained("microsoft/trocr-base-handwritten")
-    model = VisionEncoderDecoderModel.from_pretrained(model_src)
+    model = VisionEncoderDecoderModel.from_pretrained(model_src, low_cpu_mem_usage=True)
     model.eval()
     _CACHED = (processor, model)
     return _CACHED
@@ -148,14 +148,21 @@ def run_ocr(image_bytes: bytes, processor, model) -> Dict[str, Any]:
     boxes = _segment_words(pil_img)
     img_np = np.array(pil_img)
 
-    crops = []
+    words = []
     for (x1, y1, x2, y2) in boxes:
         crop = img_np[y1:y2, x1:x2]
         crop_pil = Image.fromarray(crop)
-        crops.append(crop_pil)
 
-    preds = _batch_infer(crops, processor, model, batch_size=1)
-    sentence = " ".join([p for p in preds if p])
+        # Process each crop immediately
+        pixel_values = processor(images=crop_pil, return_tensors="pt").pixel_values
+        with torch.no_grad():
+            gen_ids = model.generate(pixel_values)
+        text = processor.batch_decode(gen_ids, skip_special_tokens=True)[0].strip()
+        if text:
+            words.append(text)
+
+    sentence = " ".join(words)
+
 
     return {
         "text": sentence,

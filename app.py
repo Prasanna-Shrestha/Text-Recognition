@@ -9,6 +9,9 @@ from fastapi.responses import JSONResponse
 
 from predict import load_models, run_ocr  # our local module
 
+import os
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+
 # Optional: limit PyTorch thread usage on small CPUs
 torch.set_num_threads(int(os.getenv("TORCH_NUM_THREADS", "1")))
 
@@ -22,18 +25,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# --------- Model (loaded once) ----------
-try:
-    LOAD_START = time.time()
-    processor, model = load_models()
-    MODEL_LOAD_LATENCY = round(time.time() - LOAD_START, 2)
-except Exception as e:
-    # Defer failure until first /predict call to avoid crashing container
-    processor = model = None
-    MODEL_LOAD_LATENCY = None
-    load_error = str(e)
-else:
-    load_error = None
+# --------- Model (lazy load) ----------
+processor = model = None
+MODEL_LOAD_LATENCY = None
+load_error = None
 
 
 @app.get("/")
