@@ -5,3 +5,4 @@ transformers
 Pillow
 opencv-python-headless
 numpy
+python-multipart
