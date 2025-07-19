@@ -59,6 +59,7 @@ def healthz():
 
 @app.post("/predict")
 async def predict(file: UploadFile = File(...)):
+    global processor, model
     if model is None or processor is None:
         # Try one more time (lazy reload) before failing
         try:
@@ -66,7 +67,6 @@ async def predict(file: UploadFile = File(...)):
         except Exception as e:
             raise HTTPException(status_code=500, detail=f"Model not ready: {e}")
         else:
-            global processor, model
             processor, model = m_proc, m_model
 
     if not file.filename:
